@@ -9,9 +9,10 @@ async function bootstrap() {
 
   // 👈 ده عشان نخلي مجلد uploads متاح للعامة
   app.useStaticAssets(join(__dirname, '..', 'uploads'), { prefix: '/uploads' });
-  app.enableCors(); // متنساش الـ Cors ل
-  // 1. تفعيل الـ CORS (مهم جداً جداً عشان الـ Frontend اللي هنعمله يقدر يكلم السيرفر من غير مشاكل)
-  app.enableCors();
+ app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+    credentials: true,
+  });
 
   // 2. إعدادات Swagger (توثيق الـ APIs)
   const config = new DocumentBuilder()

@@ -81,6 +81,6 @@ export class AuthService {
     const token = await this.jwtService.signAsync(payload);
 
     // تحويل (Redirect) للفرونت إند ومعانا التوكن في الرابط
-    return res.redirect(`http://localhost:3001/dashboard?token=${token}`);
-  }
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    return res.redirect(`${frontendUrl}/dashboard?token=${token}`);  }
 }

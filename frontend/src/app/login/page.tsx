@@ -25,7 +25,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3000/auth/login", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
@@ -52,7 +52,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = () => {
     // التوجيه المباشر لسيرفر الباك إند (بورت 3000)
-    window.location.href = "http://localhost:3000/auth/google";
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/auth/google`;
   };
 
   return (

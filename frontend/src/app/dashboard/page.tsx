@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { deleteCookie, setCookie } from "cookies-next";
-import FileUploader from "@/components/FileUploader";
+import DocumentArchive from "@/components/DocumentArchive";
 import io, { Socket } from "socket.io-client";
 import { 
   Clock, Scale, LogOut, MessageSquare, Send, CheckCheck, 
@@ -14,7 +14,6 @@ import {
 let socket: Socket;
 
 export default function DashboardHomePage() {
-  // 1. استخراج setAuth عشان نحفظ فيها بيانات اليوزر بعد فك التوكن
   const { user, logout, setAuth } = useAuthStore();
   const router = useRouter();
 
@@ -27,21 +26,16 @@ export default function DashboardHomePage() {
 
   // ====== 🚀 لقط التوكن من الرابط وفك شفرته ======
   useEffect(() => {
-    // بنقرأ التوكن من الرابط
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get("token");
     
     if (urlToken) {
-      // 1. نحفظ التوكن في الكوكيز عشان الـ Middleware يرضى يدخلنا بعد كده
       setCookie("token", urlToken);
-      
-      // 2. نفك شفرة التوكن (JWT) عشان نطلع بيانات اليوزر منه
       try {
         const payloadBase64 = urlToken.split('.')[1];
         const decodedJson = atob(payloadBase64);
         const payload = JSON.parse(decodedJson);
         
-        // 3. نحفظ بيانات اليوزر في الـ Store عشان الشاشة تفتح وتجيب اسمه
         setAuth({
           id: payload.sub,
           name: payload.name,
@@ -52,8 +46,6 @@ export default function DashboardHomePage() {
       } catch(e) {
         console.error("Error decoding token", e);
       }
-      
-      // 4. ننظف الرابط ونشيل التوكن منه لشياكة الـ URL والأمان
       window.history.replaceState(null, "", "/dashboard");
     }
   }, [setAuth]);
@@ -67,8 +59,7 @@ export default function DashboardHomePage() {
   // ====== WebSocket Logic ======
   useEffect(() => {
     if (!user || user.role !== "CLIENT") return;
-    socket = io("http://localhost:3000");
-    socket.emit("joinRoom", { userId: "CLIENT" });
+socket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000");    socket.emit("joinRoom", { userId: "CLIENT" });
     socket.on("newMessage", (message: any) => {
       setMessages((prev) => [...prev, message]);
     });
@@ -94,7 +85,7 @@ export default function DashboardHomePage() {
     setInput("");
   };
 
-  // ⏳ عرض Loader احترافي أثناء فك شفرة التوكن وتحميل البيانات
+  // ⏳ عرض Loader أثناء فك شفرة التوكن
   if (!user) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
@@ -116,11 +107,6 @@ export default function DashboardHomePage() {
             <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-slate-900 shadow-lg">
               <Scale className="w-7 h-7" />
             </div>
-            // ... جوه الـ return بتاع الـ CLIENT
-<div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-  <h3 className="font-bold text-slate-900 mb-4">أرشيف مستندات القضية</h3>
-  <FileUploader caseId="القضية-رقم-4052" />
-</div>
             <div>
               <h1 className="text-xl font-black">بوابة الموكلين الرقمية</h1>
               <p className="text-amber-400 text-xs font-medium mt-0.5">أهلاً بك، أ. {user.name}</p>
@@ -131,10 +117,9 @@ export default function DashboardHomePage() {
           </button>
         </header>
 
-        {/* محتوى الشاشة مقسم لعمودين (القضية + الشات) */}
         <div className="max-w-7xl mx-auto mt-8 px-4 md:px-8 grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-500">
           
-          {/* العمود الأيمن (مسار القضية) */}
+          {/* العمود الأيمن (مسار القضية + الأرشيف) */}
           <div className="lg:col-span-2 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm flex items-center gap-4">
@@ -166,24 +151,17 @@ export default function DashboardHomePage() {
                   <h4 className="font-bold text-slate-900">إعلان الخصوم</h4>
                   <p className="text-sm text-slate-500 mt-1">تم تسليم صحيفة الدعوى لقلم المحضرين لإعلان المدعى عليه.</p>
                 </div>
-                <div className="relative">
-                  <div className="absolute -right-[35px] top-0 w-6 h-6 bg-amber-500 rounded-full border-4 border-white shadow-sm flex items-center justify-center animate-pulse"></div>
-                  <h4 className="font-bold text-amber-600">الجلسة الأولى (قيد الانتظار)</h4>
-                  <p className="text-sm text-slate-600 mt-1">سيتم تقديم حوافظ المستندات وسماع أقوال محامي الخصم.</p>
-                  <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 mt-3 inline-flex items-center gap-2 text-amber-800 text-sm font-bold">
-                    <Clock className="w-4 h-4" /> موعد الجلسة: 25 أكتوبر 2026
-                  </div>
-                </div>
-                <div className="relative">
-                  <div className="absolute -right-[35px] top-0 w-6 h-6 bg-slate-200 rounded-full border-4 border-white shadow-sm"></div>
-                  <h4 className="font-bold text-slate-400">حجز الدعوى للحكم</h4>
-                  <p className="text-sm text-slate-400 mt-1">في انتظار انتهاء المرافعات لحجز القضية للحكم.</p>
-                </div>
               </div>
             </div>
+
+            {/* 🚀 أرشيف المستندات تم وضعه هنا بشكل صحيح 🚀 */}
+            <div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm p-6 md:p-8 mt-6">
+              <DocumentArchive caseId="case-12345" />
+            </div>
+
           </div>
 
-          {/* العمود الأيسر (صندوق الشات الفوري) - هيظهر مسطرة المرة دي */}
+          {/* العمود الأيسر (صندوق الشات الفوري) */}
           <div className="lg:col-span-1 bg-white border border-amber-200/60 rounded-2xl shadow-xl overflow-hidden flex flex-col h-[650px]">
             <div className="p-4 bg-slate-900 text-white flex items-center gap-3">
               <div className="w-10 h-10 bg-amber-500 text-slate-900 rounded-full flex items-center justify-center font-bold"><MessageSquare className="w-5 h-5" /></div>
@@ -226,7 +204,7 @@ export default function DashboardHomePage() {
   }
 
   // =========================================================
-  // ⚖️ 2. شاشة المحامين والمديرين (بدون تغيير)
+  // ⚖️ 2. شاشة المحامين والمديرين
   // =========================================================
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
