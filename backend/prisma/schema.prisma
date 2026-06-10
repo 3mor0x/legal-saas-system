@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------
+// 1. Enums
+// ------------------------------------------------------
+enum Role {
+  SUPER_ADMIN
+  OFFICE_OWNER
+  LAWYER
+  SECRETARY
+  CLIENT
+}
+
+enum CaseStatus {
+  ACTIVE
+  UNDER_REVIEW
+  POSTPONED
+  CLOSED
+}
+
+enum SessionStatus {
+  SCHEDULED
+  COMPLETED
+  POSTPONED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  PAID
+  PARTIALLY_PAID
+  UNPAID
+}
+
+// ------------------------------------------------------
+// 2. Models
+// ------------------------------------------------------
+
+model Office {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String   @default("المكتب الرئيسي")
+  
+  users     User[]
+  clients   Client[]
+  cases     Case[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  fullName   String
+  email      String   @unique
+  password   String
+  phone      String?
+  isVerified Boolean  @default(false)
+nationalId String? 
+  role       Role     @default(CLIENT)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  officeId   String?  @db.ObjectId
+  office     Office?  @relation(fields: [officeId], references: [id])
+
+  lawyerCases Document[] @relation("UploadedDocuments")
+}
+
+model Client {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  phone      String
+  email      String?
+  nationalId String?
+  address    String?
+  
+  officeId   String   @db.ObjectId
+  office     Office   @relation(fields: [officeId], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  cases      Case[]
+  invoices   Invoice[]
+}
+
+model Case {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  caseNumber  String     @unique
+  title       String
+  type        String
+  court       String
+  status      CaseStatus @default(ACTIVE)
+  notes       String?    // في MongoDB نستخدم String بدل Text
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  officeId    String     @db.ObjectId
+  office      Office     @relation(fields: [officeId], references: [id])
+
+  clientId    String     @db.ObjectId
+  client      Client     @relation(fields: [clientId], references: [id])
+
+  sessions    Session[]
+  documents   Document[]
+
+  @@map("cases")
+}
+
+model Session {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  date          DateTime
+  courtLocation String
+  decision      String?
+  status        SessionStatus @default(SCHEDULED)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  caseId        String        @db.ObjectId
+  case          Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+}
+
+model Invoice {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceNumber String        @unique
+  title         String
+  totalAmount   Float
+  paidAmount    Float         @default(0)
+  dueDate       DateTime?
+  status        InvoiceStatus @default(UNPAID)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  clientId      String        @db.ObjectId
+  client        Client        @relation(fields: [clientId], references: [id])
+}
+
+model Document {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  fileName     String
+  fileUrl      String
+  fileSize     Int
+  fileType     String
+  createdAt    DateTime @default(now())
+
+  uploadedById String   @db.ObjectId
+  uploadedBy   User     @relation("UploadedDocuments", fields: [uploadedById], references: [id])
+
+  caseId       String?  @db.ObjectId
+  case         Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
+}
